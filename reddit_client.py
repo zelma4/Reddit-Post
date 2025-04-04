@@ -16,15 +16,16 @@ class RedditPoster:
         subreddit = self.reddit.subreddit(subreddit_name)
         try:
             submission = subreddit.submit_image(title=title, image_path=image_path)
-            return submission.url
+            return f"https://www.reddit.com{submission.permalink}"
         except APIException as e:
             raise Exception(f"Reddit API Error: {e}")
+
 
     def post_video(self, subreddit_name: str, title: str, video_path: str, thumbnail_path: Optional[str] = None) -> str:
         subreddit = self.reddit.subreddit(subreddit_name)
         try:
             submission = subreddit.submit_video(title=title, video_path=video_path, thumbnail_path=thumbnail_path)
-            return submission.url
+            return f"https://www.reddit.com{submission.permalink}"
         except WebSocketException as e:
             for _ in range(2):
                 time.sleep(5)

@@ -49,18 +49,28 @@ class MediaRequest(BaseModel):
     body_text: str = ""
     media_url: str
 
-def download_file_from_url(media_url: str) -> str:
-    filename = f"{uuid.uuid4()}.media"
-    path = os.path.join(UPLOAD_DIR, filename)
+def download_file_from_url(media_url: str, force_ext: str = None) -> str:
+    try:
+        basename = media_url.split("/")[-1].split("?")[0]
+        if "." in basename:
+            ext = basename.split(".")[-1]
+        elif force_ext:
+            ext = force_ext
+        else:
+            ext = "bin"  # fallback
+        filename = f"{uuid.uuid4()}.{ext}"
+        path = os.path.join(UPLOAD_DIR, filename)
 
-    r = requests.get(media_url, stream=True)
-    if r.status_code != 200:
-        raise Exception("Failed to download media from URL.")
-    
-    with open(path, "wb") as f:
-        shutil.copyfileobj(r.raw, f)
+        r = requests.get(media_url, stream=True)
+        if r.status_code != 200:
+            raise Exception("Failed to download media from URL.")
+        
+        with open(path, "wb") as f:
+            shutil.copyfileobj(r.raw, f)
 
-    return path
+        return path
+    except Exception as e:
+        raise Exception(f"Download failed: {e}")
 
 @app.post("/publishImage")
 async def publish_image(data: MediaRequest, username: str = Depends(verify_credentials)):
@@ -74,7 +84,7 @@ async def publish_image(data: MediaRequest, username: str = Depends(verify_crede
 @app.post("/publishVideo")
 async def publish_video(data: MediaRequest, username: str = Depends(verify_credentials)):
     try:
-        media_path = download_file_from_url(data.media_url)
+        media_path = download_file_from_url(data.media_url, force_ext="mp4")
         post_url = await run_in_threadpool(poster.post_video, data.subreddit, data.title, media_path)
         return {"status": "success", "url": post_url}
     except Exception as e:
